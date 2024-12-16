@@ -1,0 +1,6 @@
+@JournyTask_HostAddress = http://localhost:5181
+
+GET {{JournyTask_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

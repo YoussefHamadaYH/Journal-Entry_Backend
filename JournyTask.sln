@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35327.3
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JournyTask", "JournyTask.csproj", "{672B410F-A61D-4601-A776-330319104954}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{672B410F-A61D-4601-A776-330319104954}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{672B410F-A61D-4601-A776-330319104954}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{672B410F-A61D-4601-A776-330319104954}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{672B410F-A61D-4601-A776-330319104954}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7D1FAF91-ED5E-40D4-9BBA-F003240B0C6D}
+	EndGlobalSection
+EndGlobal
