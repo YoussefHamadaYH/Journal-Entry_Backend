@@ -23,32 +23,101 @@ namespace JournyTask.Controllers
             _accountsChartRepo = accountsChartRepo;
             _mapper = mapper;
         }
-
         [HttpGet("GetAllJournals")]
         public IActionResult GetAllJournals()
         {
-            // Get all journal headers and include related JournalDetails for each journal header
             var journals = _journalHeaderRepo.GetAll()
-                             .Select(journal =>
-                             {
-                                 journal.JournalDetails = _journalDetailRepo.GetAll()
-                                     .Where(d => d.JournalHeaderId == journal.Id)
-                                     .Select(d => new JournalDetail
-                                     {
-                                         Id = d.Id,
-                                         Debit = d.Debit,
-                                         Credit = d.Credit,
-                                         AccountId = d.AccountId,
-                                         JournalHeaderId = d.JournalHeaderId,
-                                         Account = _accountsChartRepo.getById(d.AccountId)
-                                     }).ToList();
-                                 return journal;
-                             }).ToList();
-            var journalDTOs = _mapper.Map<IEnumerable<JournalHeaderDTO>>(journals);
+                .Select(journal => new JournalHeaderDTO
+                {
+                    Id = journal.Id,
+                    EntryDate = journal.EntryDate,
+                    Description = journal.Description,
+                    JournalDetails = _journalDetailRepo.GetAll()
+                        .Where(detail => detail.JournalHeaderId == journal.Id)
+                        .Select(detail => new JournalDetailDTO
+                        {
+                            Id = detail.Id,
+                            Debit = detail.Debit,
+                            Credit = detail.Credit,
+                            AccountId = detail.AccountId,
+                            AccountName = _accountsChartRepo.getById(detail.AccountId).NameEn,
+                            AccountNumber = _accountsChartRepo.getById(detail.AccountId).Number
+                        }).ToList()
+                }).ToList();
 
-            return Ok(journalDTOs);
+            return Ok(journals);
         }
 
+        [HttpPost]
+        public IActionResult CreateJournal([FromBody] JournalHeaderDTO dto)
+        {
+            if (dto == null || !dto.JournalDetails.Any())
+                return BadRequest("Invalid data. Journal details are required.");
+
+            foreach (var journalDetailDto in dto.JournalDetails)
+            {
+                var account = _accountsChartRepo.getById(journalDetailDto.AccountId);
+                if (account == null)
+                {
+                    var newAccount = new AccountsChart
+                    {
+                        Id = journalDetailDto.AccountId == Guid.Empty ? Guid.NewGuid() : journalDetailDto.AccountId,
+                        NameAr = journalDetailDto.AccountName ?? "Default Arabic Name",
+                        NameEn = journalDetailDto.AccountName ?? "Default English Name",
+                        Number = journalDetailDto.AccountNumber ?? "0000",
+                        AllowEntry = true,
+                        IsActive = true,
+                        CreationDate = DateTime.UtcNow,
+                        FkTransactionTypeId = 1,
+                        UserId = 1,
+                        BranchId = 1,
+                        OrgId = 1
+                    };
+
+                    _accountsChartRepo.add(newAccount);
+                    journalDetailDto.AccountId = newAccount.Id;
+                }
+                else
+                {
+                    account.NameAr = journalDetailDto.AccountName ?? account.NameAr;
+                    account.NameEn = journalDetailDto.AccountName ?? account.NameEn;
+                    account.Number = journalDetailDto.AccountNumber ?? account.Number;
+                }
+            }
+
+            var journalHeader = new JournalHeader
+            {
+                Id = Guid.NewGuid(),
+                EntryDate = dto.EntryDate,
+                Description = dto.Description,
+                JournalDetails = new List<JournalDetail>()
+            };
+
+            foreach (var jd in dto.JournalDetails)
+            {
+                var detail = new JournalDetail
+                {
+                    Id = Guid.NewGuid(),
+                    Debit = jd.Debit,
+                    Credit = jd.Credit,
+                    AccountId = jd.AccountId,
+                    JournalHeaderId = journalHeader.Id
+                };
+                journalHeader.JournalDetails.Add(detail);
+            }
+
+            _journalHeaderRepo.add(journalHeader);
+            try
+            {
+                _journalHeaderRepo.save();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"An error occurred: {ex.Message}");
+            }
+
+            return Ok(new { message = "Journal created successfully", journalId = journalHeader.Id });
+        }
 
         [HttpGet("GetJournalById/{id}")]
         public IActionResult GetJournalById(Guid id)
@@ -56,97 +125,27 @@ namespace JournyTask.Controllers
             var journal = _journalHeaderRepo.getById(id);
             if (journal == null)
             {
-                return NotFound();
+                return NotFound($"Journal with ID {id} not found.");
             }
 
             journal.JournalDetails = _journalDetailRepo.GetAll()
-                                .Where(d => d.JournalHeaderId == journal.Id)
-                                .Select(d => new JournalDetail
-                                {
-                                    Id = d.Id,
-                                    Debit = d.Debit,
-                                    Credit = d.Credit,
-                                    AccountId = d.AccountId,
-                                    JournalHeaderId = d.JournalHeaderId,
-                                    Account = _accountsChartRepo.getById(d.AccountId)
-                                }).ToList();
+                .Where(detail => detail.JournalHeaderId == journal.Id)
+                .ToList();
 
             var journalDTO = _mapper.Map<JournalHeaderDTO>(journal);
+
+            // Populate account name and number for each journal detail
+            foreach (var detail in journalDTO.JournalDetails)
+            {
+                var account = _accountsChartRepo.getById(detail.AccountId);
+                if (account != null)
+                {
+                    detail.AccountName = account.NameEn; // or account.NameAr based on your preference
+                    detail.AccountNumber = account.Number;
+                }
+            }
+
             return Ok(journalDTO);
         }
-
-        // POST: api/journal
-        [HttpPost]
-        public IActionResult CreateJournal([FromBody] JournalHeaderDTO journalDTO)
-        {
-            if (journalDTO == null)
-            {
-                return BadRequest();
-            }
-
-           
-
-            // Map the JournalHeaderDTO to JournalHeader
-            var journal = _mapper.Map<JournalHeader>(journalDTO);
-
-            // Add the journal header
-            _journalHeaderRepo.add(journal);
-
-            // Save the journal header first to ensure the Id is generated
-            _journalHeaderRepo.save();
-
-            // Map and add each JournalDetailDTO to JournalDetail
-            foreach (var detailDTO in journalDTO.JournalDetails)
-            {
-                var detail = _mapper.Map<JournalDetail>(detailDTO);
-
-                // Ensure unique ID for JournalDetail
-                detail.Id = Guid.NewGuid();
-                detail.JournalHeaderId = journal.Id; // Set foreign key
-
-                _journalDetailRepo.add(detail);
-            }
-
-            // Save changes to the database
-            _journalDetailRepo.save(); // Ensure the JournalDetails are saved in a separate context operation
-
-            return CreatedAtAction(nameof(GetJournalById), new { id = journal.Id }, journalDTO);
-        }
-
-
-
-        // PUT: api/journal/{id}
-        [HttpPut("{id}")]
-        public IActionResult UpdateJournal(Guid id, [FromBody] JournalHeaderDTO journalDTO)
-        {
-            if (id != journalDTO.Id)
-            {
-                return BadRequest();
-            }
-            var journal = _journalHeaderRepo.getById(id);
-            if (journal == null)
-            {
-                return NotFound();
-            }
-            _mapper.Map(journalDTO, journal);
-            _journalHeaderRepo.update(journal);
-            _journalHeaderRepo.save();
-            return NoContent();
-        }
-
-        // DELETE: api/journal/{id}
-        [HttpDelete("{id}")]
-        public IActionResult DeleteJournal(Guid id)
-        {
-            var journal = _journalHeaderRepo.getById(id);
-            if (journal == null)
-            {
-                return NotFound();
-            }
-            _journalHeaderRepo.delete(journal);
-            _journalHeaderRepo.save();
-            return NoContent();
-        }
-
     }
 }
