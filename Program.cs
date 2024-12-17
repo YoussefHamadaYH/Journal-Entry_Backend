@@ -26,6 +26,20 @@ namespace JournyTask
             //Add Connection String
             builder.Services.AddDbContext<FCarePlus3Context>
                 (option => option.UseSqlServer(builder.Configuration.GetConnectionString("cs")));
+
+            // Add CORS policy
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAllOrigins", policy =>
+                {
+                    policy.AllowAnyOrigin()
+                          .AllowAnyMethod()
+                          .AllowAnyHeader();
+                });
+            });
+
+
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
