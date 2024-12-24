@@ -2,7 +2,7 @@
 {
     public class JournalDetailDTO
     {
-        public Guid Id { get; set; }
+        public Guid? Id { get; set; }
         public decimal Debit { get; set; }
         public decimal Credit { get; set; }
         public Guid AccountId { get; set; }

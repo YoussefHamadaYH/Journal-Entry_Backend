@@ -2,7 +2,7 @@
 {
     public class AccountsChartDTO
     {
-        public Guid AccountId { get; set; }
+        public Guid? AccountId { get; set; }
 
         public string ArabicName { get; set; } = null!;
 

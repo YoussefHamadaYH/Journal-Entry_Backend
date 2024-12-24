@@ -5,7 +5,7 @@ namespace JournyTask.DTOs
 {
     public class JournalHeaderDTO
     {
-        public Guid Id { get; set; }
+        public Guid? Id { get; set; }
         [Required]
         [DataType(DataType.Date)]
         public  DateTime EntryDate  { get; set; }

@@ -16,16 +16,14 @@ namespace JournyTask
             // Add services to the container.
 
             builder.Services.AddControllers();
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
             builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
-            // Add AutoMapper
             builder.Services.AddAutoMapper(typeof(MappingProfile));
-            //Add Connection String
-            builder.Services.AddDbContext<FCarePlus3Context>
-                (option => option.UseSqlServer(builder.Configuration.GetConnectionString("cs")));
+
+            builder.Services.AddDbContext<FCarePlus3Context>(option =>
+                option.UseSqlServer(builder.Configuration.GetConnectionString("cs")));
 
             // Add CORS policy
             builder.Services.AddCors(options =>
@@ -38,8 +36,6 @@ namespace JournyTask
                 });
             });
 
-
-
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -50,13 +46,14 @@ namespace JournyTask
             }
 
             app.UseHttpsRedirection();
+            app.UseCors("AllowAllOrigins"); // Apply the CORS policy
 
             app.UseAuthorization();
-
 
             app.MapControllers();
 
             app.Run();
         }
     }
+
 }
