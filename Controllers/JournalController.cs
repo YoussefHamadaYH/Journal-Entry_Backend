@@ -23,6 +23,7 @@ namespace JournyTask.Controllers
             _accountsChartRepo = accountsChartRepo;
             _mapper = mapper;
         }
+
         [HttpGet("GetAllJournals")]
         public IActionResult GetAllJournals()
         {
@@ -34,21 +35,25 @@ namespace JournyTask.Controllers
                     Description = journal.Description,
                     JournalDetails = _journalDetailRepo.GetAll()
                         .Where(detail => detail.JournalHeaderId == journal.Id)
-                        .Select(detail => new JournalDetailDTO
+                        .Select(detail =>
                         {
-                            Id = detail.Id,
-                            Debit = detail.Debit,
-                            Credit = detail.Credit,
-                            AccountId = detail.AccountId,
-                            AccountName = _accountsChartRepo.getById(detail.AccountId).NameEn,
-                            AccountNumber = _accountsChartRepo.getById(detail.AccountId).Number
+                            var account = _accountsChartRepo.getById(detail.AccountId);
+                            return new JournalDetailDTO
+                            {
+                                Id = detail.Id,
+                                Debit = detail.Debit,
+                                Credit = detail.Credit,
+                                AccountId = detail.AccountId,
+                                AccountName = account?.NameEn ?? "Account Not Found",
+                                AccountNumber = account?.Number ?? "N/A"
+                            };
                         }).ToList()
                 }).ToList();
 
             return Ok(journals);
         }
 
-        [HttpPost]
+        [HttpPost("CreateJournal")]
         public IActionResult CreateJournal([FromBody] JournalHeaderDTO dto)
         {
             if (dto == null || !dto.JournalDetails.Any())
@@ -75,7 +80,7 @@ namespace JournyTask.Controllers
                     };
 
                     _accountsChartRepo.add(newAccount);
-                    journalDetailDto.AccountId = newAccount.Id;
+                    journalDetailDto.AccountId = newAccount.Id; 
                 }
                 else
                 {
@@ -90,23 +95,18 @@ namespace JournyTask.Controllers
                 Id = Guid.NewGuid(),
                 EntryDate = dto.EntryDate,
                 Description = dto.Description,
-                JournalDetails = new List<JournalDetail>()
-            };
-
-            foreach (var jd in dto.JournalDetails)
-            {
-                var detail = new JournalDetail
+                JournalDetails = dto.JournalDetails.Select(jd => new JournalDetail
                 {
                     Id = Guid.NewGuid(),
                     Debit = jd.Debit,
                     Credit = jd.Credit,
                     AccountId = jd.AccountId,
-                    JournalHeaderId = journalHeader.Id
-                };
-                journalHeader.JournalDetails.Add(detail);
-            }
+                    JournalHeaderId = Guid.Empty 
+                }).ToList()
+            };
 
             _journalHeaderRepo.add(journalHeader);
+
             try
             {
                 _journalHeaderRepo.save();
@@ -124,28 +124,36 @@ namespace JournyTask.Controllers
         {
             var journal = _journalHeaderRepo.getById(id);
             if (journal == null)
-            {
                 return NotFound($"Journal with ID {id} not found.");
-            }
 
+            // Load journal details
             journal.JournalDetails = _journalDetailRepo.GetAll()
                 .Where(detail => detail.JournalHeaderId == journal.Id)
                 .ToList();
 
             var journalDTO = _mapper.Map<JournalHeaderDTO>(journal);
-
-            // Populate account name and number for each journal detail
             foreach (var detail in journalDTO.JournalDetails)
             {
                 var account = _accountsChartRepo.getById(detail.AccountId);
-                if (account != null)
-                {
-                    detail.AccountName = account.NameEn; // or account.NameAr based on your preference
-                    detail.AccountNumber = account.Number;
-                }
+                detail.AccountName = account?.NameEn ?? "Account Not Found";
+                detail.AccountNumber = account?.Number ?? "N/A";
             }
 
             return Ok(journalDTO);
         }
+        [HttpGet("GetAllAccountNumberAndId")]
+        public IActionResult GetAllAccountNumberAndId()
+        {
+            var accounts = _accountsChartRepo.GetAll()
+                .Select(c => new
+                {
+                    Account_Name = c.NameEn,
+                    Account_Number = c.Number
+                })
+                .Take(10) //only take 10
+                .ToList();
+            return Ok(accounts);
+        }
+
     }
 }
