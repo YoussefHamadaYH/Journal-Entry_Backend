@@ -40,10 +40,7 @@ This repository contains the backend implementation for a **Journal Entry Task**
 - **Tables**:
   - **JournalEntryHeader**: Stores the header information (Entry Date, Description, etc.).
   - **JournalEntryDetails**: Stores the details (Debit, Credit, Account ID, etc.).
-- **Relationship**: 
-  - A **one-to-many** relationship exists between `JournalEntryHeader` and `JournalEntryDetails`.
-  - Each detail record contains a **Foreign Key** linking it to the header.
-
+  - **AccountsChart** : Stores account information used in journal entries.
 ---
 
 ## API Endpoints
